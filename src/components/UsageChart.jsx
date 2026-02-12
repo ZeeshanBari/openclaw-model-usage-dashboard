@@ -3,9 +3,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 
 export default function UsageChart({ data = [] }) {
   const chartData = (data || []).map(day => ({
-    date: day.date.slice(5), // MM-DD format
+    date: day.date?.slice(5) || '??-??',
     cost: day.totalCost || 0,
-    tokens: Math.round((day.totalTokens || 0) / 1000) // in thousands
+    tokens: Math.round((day.totalTokens || 0) / 1000)
   }));
 
   return (
