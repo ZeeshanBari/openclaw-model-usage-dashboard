@@ -1,11 +1,11 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-export default function UsageChart({ data }) {
-  const chartData = data.map(day => ({
+export default function UsageChart({ data = [] }) {
+  const chartData = (data || []).map(day => ({
     date: day.date.slice(5), // MM-DD format
-    cost: day.totalCost,
-    tokens: Math.round(day.totalTokens / 1000) // in thousands
+    cost: day.totalCost || 0,
+    tokens: Math.round((day.totalTokens || 0) / 1000) // in thousands
   }));
 
   return (

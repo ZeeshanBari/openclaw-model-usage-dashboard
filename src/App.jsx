@@ -17,46 +17,118 @@ function App() {
   }, []);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
+      // Try API first (for local development)
       const response = await fetch('/api/usage');
-      const data = await response.json();
-      setTodayData(data.today);
-      setWeekData(data.week);
-      setAllTime(data.allTime);
+      if (response.ok) {
+        const data = await response.json();
+        setTodayData(data.today);
+        setWeekData(data.week);
+        setAllTime(data.allTime);
+        // Save to localStorage for GitHub Pages
+        localStorage.setItem('usage_today', JSON.stringify(data.today));
+        localStorage.setItem('usage_week', JSON.stringify(data.week));
+        localStorage.setItem('usage_alltime', JSON.stringify(data.allTime));
+        setLoading(false);
+        return;
+      }
     } catch (error) {
-      console.error('Failed to fetch usage data:', error);
-      // Use demo data if API fails
+      console.log('API not available, using localStorage/demo data');
+    }
+
+    // Fallback to localStorage or demo data (for GitHub Pages)
+    const storedToday = localStorage.getItem('usage_today');
+    const storedWeek = localStorage.getItem('usage_week');
+    const storedAllTime = localStorage.getItem('usage_alltime');
+
+    if (storedToday && storedWeek) {
+      setTodayData(JSON.parse(storedToday));
+      setWeekData(JSON.parse(storedWeek));
+      setAllTime(JSON.parse(storedAllTime || '{"totalTokens":0,"totalCost":0,"totalSessions":0}'));
+    } else {
+      // Use demo data
       setTodayData({
         date: new Date().toISOString().split('T')[0],
         models: {
-          'minimax/MiniMax-M2.1': { totalTokens: 125000, totalCost: 8.75, calls: 42 }
+          'MiniMax-M2.1': { totalTokens: 125000, totalCost: 8.75, calls: 42 }
         },
         totalTokens: 125000,
         totalCost: 8.75
       });
       setWeekData([
-        { date: '2026-02-06', totalCost: 12.50, totalTokens: 150000 },
-        { date: '2026-02-07', totalCost: 18.20, totalTokens: 220000 },
-        { date: '2026-02-08', totalCost: 15.00, totalTokens: 180000 },
-        { date: '2026-02-09', totalCost: 22.00, totalTokens: 280000 },
-        { date: '2026-02-10', totalCost: 9.50, totalTokens: 110000 },
-        { date: '2026-02-11', totalCost: 14.80, totalTokens: 175000 },
-        { date: '2026-02-12', totalCost: 8.75, totalTokens: 125000 }
+        { date: '02-06', totalCost: 12.50, totalTokens: 150000 },
+        { date: '02-07', totalCost: 18.20, totalTokens: 220000 },
+        { date: '02-08', totalCost: 15.00, totalTokens: 180000 },
+        { date: '02-09', totalCost: 22.00, totalTokens: 280000 },
+        { date: '02-10', totalCost: 9.50, totalTokens: 110000 },
+        { date: '02-11', totalCost: 14.80, totalTokens: 175000 },
+        { date: '02-12', totalCost: 8.75, totalTokens: 125000 }
       ]);
       setAllTime({
         totalTokens: 1250000,
         totalCost: 98.50,
         totalSessions: 287
       });
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
+  };
+
+  const handleExportCSV = () => {
+    alert('Export requires local server. Run: npm run server');
+  };
+
+  const handleWeeklyReport = () => {
+    alert('Weekly report requires local server. Run: npm run server');
+  };
+
+  const handleObsidianNote = () => {
+    const note = generateObsidianNote();
+    const blob = new Blob([note], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-usage-${new Date().toISOString().split('T')[0]}.md`;
+    a.click();
+  };
+
+  const generateObsidianNote = () => {
+    const data = todayData;
+    const budget = 20;
+    const budgetPercent = ((data?.totalCost || 0) / budget) * 100;
+    
+    let note = `# AI Usage - ${new Date().toISOString().split('T')[0]}\n\n`;
+    note += `## Budget Status\n`;
+    note += `- **Spent:** $${(data?.totalCost || 0).toFixed(2)} / $${budget}\n`;
+    note += `- **Remaining:** $${(budget - (data?.totalCost || 0)).toFixed(2)}\n`;
+    note += `- **Usage:** ${budgetPercent.toFixed(1)}%\n\n`;
+    
+    note += `## Model Usage\n\n`;
+    note += `| Model | Tokens | Cost | Calls |\n`;
+    note += `|-------|--------|------|-------|\n`;
+    
+    Object.entries(data?.models || {}).sort((a, b) => b[1].totalTokens - a[1].totalTokens).forEach(([model, stats]) => {
+      note += `| ${model.split('/').pop()} | ${stats.totalTokens.toLocaleString()} | $${stats.cost.toFixed(4)} | ${stats.calls} |\n`;
+    });
+    
+    note += `\n**Total:** ${(data?.totalTokens || 0).toLocaleString()} tokens, $${(data?.totalCost || 0).toFixed(4)}\n`;
+    return note;
   };
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <div>Loading usage data...</div>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+        color: 'white'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>🤖</div>
+          <div>Loading usage data...</div>
+        </div>
       </div>
     );
   }
@@ -66,7 +138,8 @@ function App() {
       minHeight: '100vh', 
       background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
       color: 'white',
-      padding: '20px'
+      padding: '20px',
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
     }}>
       <header style={{ 
         display: 'flex', 
@@ -84,7 +157,7 @@ function App() {
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: '12px', opacity: 0.7 }}>
-            Last updated: {new Date().toLocaleString()}
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
           </div>
           <button 
             onClick={fetchData}
@@ -95,7 +168,8 @@ function App() {
               padding: '8px 16px',
               borderRadius: '6px',
               cursor: 'pointer',
-              marginTop: '5px'
+              marginTop: '8px',
+              fontSize: '14px'
             }}
           >
             🔄 Refresh
@@ -112,8 +186,8 @@ function App() {
       }}>
         <StatsCard 
           title="Today's Spend" 
-          value={`$${todayData?.totalCost?.toFixed(2) || '0.00'}`}
-          subtitle={`${((todayData?.totalCost / DAILY_BUDGET) * 100 || 0).toFixed(1)}% of budget`}
+          value={`$${(todayData?.totalCost || 0).toFixed(2)}`}
+          subtitle={`${((todayData?.totalCost || 0) / DAILY_BUDGET * 100).toFixed(1)}% of budget`}
           icon="💰"
         />
         <StatsCard 
@@ -130,14 +204,14 @@ function App() {
         />
         <StatsCard 
           title="All Time" 
-          value={`$${allTime?.totalCost?.toFixed(2) || '0.00'}`}
+          value={`$${(allTime?.totalCost || 0).toFixed(2)}`}
           subtitle={`${((allTime?.totalTokens || 0) / 1000000).toFixed(2)}M tokens`}
           icon="🏆"
         />
       </div>
 
       {/* Main Content */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
         {/* Budget Gauge */}
         <div style={{ 
           background: 'rgba(255,255,255,0.05)', 
@@ -174,27 +248,24 @@ function App() {
         background: 'rgba(255,255,255,0.05)',
         borderRadius: '12px'
       }}>
-        <h3 style={{ marginTop: 0 }}>⚡ Quick Actions</h3>
+        <h3 style={{ marginTop: 0, marginBottom: '15px' }}>⚡ Quick Actions</h3>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button 
-            onClick={() => window.open('/api/export/csv', '_blank')}
-            style={actionButtonStyle}
-          >
-            📥 Export CSV
-          </button>
-          <button 
-            onClick={() => window.open('/api/export/weekly', '_blank')}
-            style={actionButtonStyle}
-          >
-            📊 Weekly Report
-          </button>
-          <button 
-            onClick={() => window.open('/api/obsidian/daily', '_blank')}
-            style={actionButtonStyle}
-          >
-            📝 Today's Obsidian Note
-          </button>
+          <button onClick={handleExportCSV} style={actionButtonStyle}>📥 Export CSV</button>
+          <button onClick={handleWeeklyReport} style={actionButtonStyle}>📊 Weekly Report</button>
+          <button onClick={handleObsidianNote} style={actionButtonStyle}>📝 Today's Obsidian Note</button>
         </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{ 
+        marginTop: '30px', 
+        textAlign: 'center', 
+        opacity: 0.5, 
+        fontSize: '12px',
+        padding: '20px'
+      }}>
+        <p>OpenClaw Model Usage Dashboard</p>
+        <p>Data requires local server for live updates</p>
       </div>
     </div>
   );
@@ -207,7 +278,7 @@ const actionButtonStyle = {
   padding: '10px 20px',
   borderRadius: '8px',
   cursor: 'pointer',
-  transition: 'background 0.2s'
+  transition: 'all 0.2s ease'
 };
 
 export default App;

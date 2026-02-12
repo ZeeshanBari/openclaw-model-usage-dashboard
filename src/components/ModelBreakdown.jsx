@@ -5,11 +5,11 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'
 
 export default function ModelBreakdown({ models }) {
   const data = Object.entries(models).map(([name, stats]) => ({
-    name: name.split('/').pop(),
-    value: stats.totalCost,
-    tokens: stats.totalTokens,
-    calls: stats.calls
-  })).sort((a, b) => b.value - a.value);
+    name: name.includes('/') ? name.split('/').pop() : name,
+    value: stats.totalCost || stats.cost || 0,
+    tokens: stats.totalTokens || stats.tokens || 0,
+    calls: stats.calls || 0
+  }).sort((a, b) => b.value - a.value));
 
   return (
     <div style={{ height: '300px' }}>
